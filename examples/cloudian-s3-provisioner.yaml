@@ -76,5 +76,5 @@ spec:
       serviceAccountName: cloudian-s3-operator-account
       containers:
         - name: cloudian-s3-operator
-          image: quay.io/cloudian/cloudian-s3-operator:1.0.0
+          image: quay.io/cloudian/cloudian-s3-operator:1.0.1
       restartPolicy: Always
