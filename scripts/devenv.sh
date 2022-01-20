@@ -14,7 +14,7 @@ fi
 
 COMPOSE_FILE="$(dirname "$(realpath "$0")")/../.devcontainer/docker-compose.yml"
 # shellcheck source=/dev/null
-source "$(dirname "$COMPOSE_FILE")/.env"
+source "$(dirname "$COMPOSE_FILE")/../.env"
 export COMPOSE_PROJECT_NAME
 export COMPOSE_FILE
 export BUILD_USER=$(id -u)
