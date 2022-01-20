@@ -192,8 +192,9 @@ func (p *awsS3Provisioner) createBucket(bktName string) error {
 // generates an aws.Config from a provision and service endpoint url
 func (p *awsS3Provisioner) awsConfig(endpoint *url.URL) *aws.Config {
 	cfg := &aws.Config{
-		Region:      aws.String(p.region),
-		Credentials: credentials.NewStaticCredentials(p.bktOwnerAccessId, p.bktOwnerSecretKey, ""),
+		Region:           aws.String(p.region),
+		Credentials:      credentials.NewStaticCredentials(p.bktOwnerAccessId, p.bktOwnerSecretKey, ""),
+		S3ForcePathStyle: aws.Bool(true),
 	}
 	if endpoint != nil {
 		cfg.Endpoint = aws.String(endpoint.String())
