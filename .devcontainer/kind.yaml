@@ -1,10 +1,5 @@
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-networking:
-  # The kind docker container runs inside the dind container, so
-  # allow kubectl connections from the dev container to the dind container
-  apiServerAddress: "0.0.0.0"
-
 nodes:
   - role: control-plane
     # port forward the photo gallery apps 

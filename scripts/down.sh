@@ -24,7 +24,7 @@ if $keep; then
 fi
 
 # Kill provisioner
-ps auxf | grep cloudian-s3-operator | grep -v grep | grep -v docker | grep -v down.sh | awk '{print $2}' | xargs --no-run-if-empty kill
+ps auxf | grep -alsologtostderr | grep -v grep | grep -v docker | grep -v down.sh | awk '{print $2}' | xargs --no-run-if-empty kill
 
 # Undo object setup
 kubectl delete -f examples/owner-secret.yaml

@@ -1,31 +1,50 @@
 {
 	"name": "Cloudian S3 Operator",
-	"dockerComposeFile": "docker-compose.yml",
-	"service": "devenv",
-	// Use 'settings' to set *default* container specific settings.json values on container create. 
-	// You can edit these settings after create using File > Preferences > Settings > Remote.
-	"settings": {
-		"terminal.integrated.shell.linux": "/bin/bash",
-		"go.gopath": "/go",
-		"go.inferGopath": true,
-		"go.useLanguageServer": true,
-		"go.lintTool": "golangci-lint",
-		"go.formatTool": "goimports"
+	"build": {
+		"dockerfile": "Dockerfile"
 	},
-	// Add the IDs of extensions you want installed when the container is created in the array below.
-	"extensions": [
-		"eamodio.gitlens",
-		"github.vscode-pull-request-github",
-		"golang.go",
-		"ms-kubernetes-tools.vscode-kubernetes-tools",
-		"ms-vsliveshare.vsliveshare",
-		"redhat.vscode-yaml",
-		"timonwong.shellcheck"
+	"privileged": true,
+	"capAdd": [ "SYS_PTRACE" ],
+	"securityOpt": [ "seccomp=unconfined" ],
+	"overrideCommand": false,
+	"mounts": [
+		"type=volume,src=cloudian-s3-operator-dind,dst=/var/lib/docker",
+		"type=volume,src=cloudian-s3-operator-aws,dst=/home/builder/.aws",
+		"type=volume,src=cloudian-s3-operator-docker,dst=/home/builder/.docker"
 	],
 	"remoteUser": "builder",
-	"workspaceFolder": "/home/builder/cloudian-s3-operator",
 	"remoteEnv": {
 		"EDITOR": "code -r -w",
+		"PATH": "${containerEnv:PATH}:/workspaces/cloudian-s3-operator/scripts"
 	},
-	"postCreateCommand": "scripts/k8s.sh --restore"
+	"postCreateCommand": "scripts/k8s.sh --restore",
+	"forwardPorts": [30007],
+	"portsAttributes": {
+		"30007": {
+			"label": "Photo Gallery",
+			"protocol": "http"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"remote.autoForwardPorts": false,
+				"terminal.integrated.shellIntegration.enabled": true,
+				"go.gopath": "/home/builder/go",
+				"go.inferGopath": true,
+				"go.useLanguageServer": true,
+				"go.lintTool": "golangci-lint",
+				"go.formatTool": "goimports"
+			},
+			// Add the IDs of extensions you want installed when the container is created in the array below.
+			"extensions": [
+				"eamodio.gitlens",
+				"github.vscode-pull-request-github",
+				"golang.go",
+				"ms-kubernetes-tools.vscode-kubernetes-tools",
+				"redhat.vscode-yaml",
+				"timonwong.shellcheck"
+			]
+		}
+	}
 }

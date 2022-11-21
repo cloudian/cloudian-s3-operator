@@ -12,10 +12,10 @@ tag=${1:-quay.io/cloudian/cloudian-s3-operator:1.0.1}
 
 docker build -t "$tag" .
 
-# If we're running a kubernetes in docker cluster, load the image
+# If we're running a kind cluster, load the image
 # into the cluster so we don't have to download it
 if [ -n "$(kubectl config get-contexts | grep "*" | grep "kind-kind")" ]; then
-    kind load docker-image "$tag"
+     kind load docker-image "$tag"
 fi
 
 # If we're running a microk9s cluster, set a tag and push to the k8s registry
