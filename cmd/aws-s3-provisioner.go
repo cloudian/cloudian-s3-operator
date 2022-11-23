@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/url"
@@ -205,8 +206,9 @@ func (p *awsS3Provisioner) awsConfig(endpoint *url.URL) *aws.Config {
 // Create an aws session based on the OBC's storage class's secret and region.
 // Set in the receiver the session and region used to create the session.
 // Note: in error cases it's possible that the set region is different from
-//   the OBC's storage class's region.
-func (p *awsS3Provisioner) awsSessionFromStorageClass(sc *storageV1.StorageClass) error {
+//
+//	the OBC's storage class's region.
+func (p *awsS3Provisioner) awsSessionFromStorageClass(ctx context.Context, sc *storageV1.StorageClass) error {
 
 	// helper func var for error returns
 	var errDefault = func() error {
@@ -229,7 +231,7 @@ func (p *awsS3Provisioner) awsSessionFromStorageClass(sc *storageV1.StorageClass
 	}
 
 	// get the sc's bucket owner secret
-	accessKeyId, secretKey, err := credsFromSecret(p.clientset, secretNS, secretName)
+	accessKeyId, secretKey, err := credsFromSecret(ctx, p.clientset, secretNS, secretName)
 	if err != nil {
 		glog.Warningf("secret \"%s/%s\" in storage class %q for %q is empty.\nUsing default credentials.", secretNS, secretName, sc.Name, p.bucketName)
 		return errDefault()
@@ -262,10 +264,10 @@ func (p *awsS3Provisioner) awsSessionFromStorageClass(sc *storageV1.StorageClass
 }
 
 // Create the AWS session and S3 service and store them to the receiver.
-func (p *awsS3Provisioner) setSessionAndService(sc *storageV1.StorageClass) error {
+func (p *awsS3Provisioner) setSessionAndService(ctx context.Context, sc *storageV1.StorageClass) error {
 	// set the aws session
 	glog.V(2).Infof("Creating S3 session based on storageclass %q", sc.Name)
-	err := p.awsSessionFromStorageClass(sc)
+	err := p.awsSessionFromStorageClass(ctx, sc)
 	if err != nil {
 		return fmt.Errorf("error creating AWS session: %v", err)
 	}
@@ -281,7 +283,7 @@ func (p *awsS3Provisioner) setSessionAndService(sc *storageV1.StorageClass) erro
 
 // initializeCreateOrGrant sets common provisioner receiver fields and
 // the services and sessions needed to provision.
-func (p *awsS3Provisioner) initializeCreateOrGrant(options *apibkt.BucketOptions) error {
+func (p *awsS3Provisioner) initializeCreateOrGrant(ctx context.Context, options *apibkt.BucketOptions) error {
 	glog.V(2).Infof("initializing and setting CreateOrGrant services")
 	// set the bucket name
 	p.bucketName = options.BucketName
@@ -289,7 +291,7 @@ func (p *awsS3Provisioner) initializeCreateOrGrant(options *apibkt.BucketOptions
 	// get the OBC and its storage class
 	obc := options.ObjectBucketClaim
 	scName := options.ObjectBucketClaim.Spec.StorageClassName
-	sc, err := p.getClassByNameForBucket(scName)
+	sc, err := p.getClassByNameForBucket(ctx, scName)
 	if err != nil {
 		glog.Errorf("failed to get storage class for OBC \"%s/%s\": %v", obc.Namespace, obc.Name, err)
 		return err
@@ -305,7 +307,7 @@ func (p *awsS3Provisioner) initializeCreateOrGrant(options *apibkt.BucketOptions
 	}
 
 	// set the aws session and s3 service from the storage class
-	err = p.setSessionAndService(sc)
+	err = p.setSessionAndService(ctx, sc)
 	if err != nil {
 		return fmt.Errorf("error using OBC \"%s/%s\": %v", obc.Namespace, obc.Name, err)
 	}
@@ -316,7 +318,7 @@ func (p *awsS3Provisioner) initializeCreateOrGrant(options *apibkt.BucketOptions
 // initializeUserAndPolicy sets commonly used provisioner
 // receiver fields, generates a unique username and calls
 // handleUserandPolicy.
-func (p *awsS3Provisioner) initializeUserAndPolicy(options *apibkt.BucketOptions) error {
+func (p *awsS3Provisioner) initializeUserAndPolicy(ctx context.Context, options *apibkt.BucketOptions) error {
 
 	scName := options.ObjectBucketClaim.Spec.StorageClassName
 	var err error
@@ -337,7 +339,7 @@ func (p *awsS3Provisioner) initializeUserAndPolicy(options *apibkt.BucketOptions
 		// Extract the bucket user secret
 		uSecretNS := options.Parameters["bucketClaimUserSecretNamespace"]
 		// get the sc's bucket owner secret
-		uAccess, uKey, err = credsFromSecret(p.clientset, uSecretNS, uSecretName)
+		uAccess, uKey, err = credsFromSecret(ctx, p.clientset, uSecretNS, uSecretName)
 		if err != nil {
 			glog.Errorf("secret \"%s/%s\" in storage class %s for %q is invalid: %v", uSecretNS, uSecretName, scName, p.bucketName, err)
 		}
@@ -384,18 +386,29 @@ func (p *awsS3Provisioner) checkIfUserExists(name string) bool {
 	return false
 }
 
+// GenerateUserID should deterministically generate a user ID for an OBC. This ID is used as an
+// idempotency key in order to ensure repeat calls to Provision or Grant are consistent.
+// Lib-bucket-provisioner may pass a non-nil ObjectBucket with the function as well. This will
+// be nil if the ObjectBucket does not yet exist, but it will be non-nil for existing buckets.
+// This may help provisioners recover the idempotency key from a pre-existing bucket.
+func (p awsS3Provisioner) GenerateUserID(obc *v1alpha1.ObjectBucketClaim, ob *v1alpha1.ObjectBucket) (string, error) {
+	return obc.Name, nil
+}
+
 // Provision creates an aws s3 bucket and returns a connection info
 // representing the bucket's endpoint and user access credentials.
 // Programming Note: _all_ methods on "awsS3Provisioner" called directly
-//   or indirectly by `Provision` should use pointer receivers. This allows
-//   all supporting methods to set receiver fields where convenient. An
-//   alternative (arguably better) would be for all supporting methods
-//   to take value receivers and functionally return back to `Provision`
-//   receiver fields they need set. The first approach is easier for now.
+//
+//	or indirectly by `Provision` should use pointer receivers. This allows
+//	all supporting methods to set receiver fields where convenient. An
+//	alternative (arguably better) would be for all supporting methods
+//	to take value receivers and functionally return back to `Provision`
+//	receiver fields they need set. The first approach is easier for now.
 func (p awsS3Provisioner) Provision(options *apibkt.BucketOptions) (*v1alpha1.ObjectBucket, error) {
+	ctx := context.Background()
 
 	// initialize and set the AWS services and commonly used variables
-	err := p.initializeCreateOrGrant(options)
+	err := p.initializeCreateOrGrant(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -424,7 +437,7 @@ func (p awsS3Provisioner) Provision(options *apibkt.BucketOptions) (*v1alpha1.Ob
 	// Bucket does exist, attach new user and policy wrapper
 	// calling initializeCreateOrGrant
 	// TODO: we currently are catching an error that is always nil
-	err = p.initializeUserAndPolicy(options)
+	err = p.initializeUserAndPolicy(ctx, options)
 	if err != nil {
 		err = fmt.Errorf("error creating user for bucket %q: %v", p.bucketName, err)
 		glog.Errorf(err.Error())
@@ -438,9 +451,10 @@ func (p awsS3Provisioner) Provision(options *apibkt.BucketOptions) (*v1alpha1.Ob
 // Grant attaches to an existing aws s3 bucket and returns a connection info
 // representing the bucket's endpoint and user access credentials.
 func (p awsS3Provisioner) Grant(options *apibkt.BucketOptions) (*v1alpha1.ObjectBucket, error) {
+	ctx := context.Background()
 
 	// initialize and set the AWS services and commonly used variables
-	err := p.initializeCreateOrGrant(options)
+	err := p.initializeCreateOrGrant(ctx, options)
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +468,7 @@ func (p awsS3Provisioner) Grant(options *apibkt.BucketOptions) (*v1alpha1.Object
 	// Bucket does exist, attach new user and policy wrapper
 	// calling initializeUserAndPolicy
 	// TODO: we currently are catching an error that is always nil
-	err = p.initializeUserAndPolicy(options)
+	err = p.initializeUserAndPolicy(ctx, options)
 	if err != nil {
 		err = fmt.Errorf("error creating user for bucket %q: %v", p.bucketName, err)
 		glog.Errorf(err.Error())
@@ -469,6 +483,7 @@ func (p awsS3Provisioner) Grant(options *apibkt.BucketOptions) (*v1alpha1.Object
 // Delete the bucket and all its objects.
 // Note: only called when the bucket's reclaim policy is "delete".
 func (p awsS3Provisioner) Delete(ob *v1alpha1.ObjectBucket) error {
+	ctx := context.Background()
 
 	// set receiver fields from OB data
 	p.bucketName = ob.Spec.Endpoint.BucketName
@@ -478,13 +493,13 @@ func (p awsS3Provisioner) Delete(ob *v1alpha1.ObjectBucket) error {
 	glog.Infof("Deleting bucket %q for OB %q", p.bucketName, ob.Name)
 
 	// get the OB and its storage class
-	sc, err := p.getClassByNameForBucket(scName)
+	sc, err := p.getClassByNameForBucket(ctx, scName)
 	if err != nil {
 		return fmt.Errorf("failed to get storage class for OB %q: %v", ob.Name, err)
 	}
 
 	// set the aws session and s3 service from the storage class
-	err = p.setSessionAndService(sc)
+	err = p.setSessionAndService(ctx, sc)
 	if err != nil {
 		return fmt.Errorf("error using OB %q: %v", ob.Name, err)
 	}
@@ -522,6 +537,8 @@ func (p awsS3Provisioner) Delete(ob *v1alpha1.ObjectBucket) error {
 
 // Revoke removes a user, policy and access keys from an existing bucket.
 func (p awsS3Provisioner) Revoke(ob *v1alpha1.ObjectBucket) error {
+	ctx := context.Background()
+
 	// set receiver fields from OB data
 	p.bucketName = ob.Spec.Endpoint.BucketName
 	p.bktUserPolicyArn = ob.Spec.AdditionalState[obStateARN]
@@ -530,13 +547,13 @@ func (p awsS3Provisioner) Revoke(ob *v1alpha1.ObjectBucket) error {
 	glog.Infof("Revoking access to bucket %q for OB %q", p.bucketName, ob.Name)
 
 	// get the OB and its storage class
-	sc, err := p.getClassByNameForBucket(scName)
+	sc, err := p.getClassByNameForBucket(ctx, scName)
 	if err != nil {
 		return fmt.Errorf("failed to get storage class for OB %q: %v", ob.Name, err)
 	}
 
 	// set the aws session and s3 service from the storage class
-	err = p.setSessionAndService(sc)
+	err = p.setSessionAndService(ctx, sc)
 	if err != nil {
 		return fmt.Errorf("error using OB %q: %v", ob.Name, err)
 	}
@@ -606,7 +623,8 @@ func main() {
 
 // Set -kubeconfig and (deprecated) -master flags.
 // Note: when the bucket library used the controller-runtime, -kubeconfig and -master were
-//   set its config package's init() function. Now this is done here.
+//
+//	set its config package's init() function. Now this is done here.
 func handleFlags() {
 
 	flag.StringVar(&kubeconfig, "kubeconfig", os.Getenv("KUBECONFIG"), "Path to a kubeconfig. Only required if out-of-cluster.")

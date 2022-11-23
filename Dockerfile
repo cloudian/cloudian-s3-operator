@@ -1,19 +1,21 @@
 # First stage - build the provisioner
-FROM golang:1.14-alpine3.11 as build
+FROM golang:1.19.3-alpine3.16 as build
 RUN apk add --update build-base
 
+WORKDIR /app
+
 # Copy source tree
-COPY vendor/ /app/vendor/
 COPY go.mod go.sum /app/
+# cache deps before building and copying source so that we don't need to re-download as much
+# and so that source changes don't invalidate our downloaded layer
+RUN go mod download
 COPY cmd/ /app/cmd/
 
 # Build
-WORKDIR /app
 RUN go build -a -o cloudian-s3-operator ./cmd
 
-
 # Final stage - distribution image
-FROM alpine:3.11
+FROM alpine:3.16
 
 COPY --from=build /app/cloudian-s3-operator /usr/local/bin/
 

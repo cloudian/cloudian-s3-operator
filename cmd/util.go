@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -34,10 +35,10 @@ import (
 )
 
 // Return the storage class for a given name.
-func (p *awsS3Provisioner) getClassByNameForBucket(className string) (*storageV1.StorageClass, error) {
+func (p *awsS3Provisioner) getClassByNameForBucket(ctx context.Context, className string) (*storageV1.StorageClass, error) {
 
 	glog.V(2).Infof("getting storage class %q...", className)
-	class, err := p.clientset.StorageV1().StorageClasses().Get(className, metav1.GetOptions{})
+	class, err := p.clientset.StorageV1().StorageClasses().Get(ctx, className, metav1.GetOptions{})
 	// TODO: retry w/ exponential backoff
 	if err != nil {
 		return nil, fmt.Errorf("unable to Get storageclass %q: %v", className, err)
@@ -96,11 +97,11 @@ func getIAMApiURL(sc *storageV1.StorageClass) (*url.URL, error) {
 }
 
 // Get the secret and set the receiver to the accessKeyId and secretKey.
-func credsFromSecret(c *kubernetes.Clientset, ns, name string) (accessKeyId, secretKey string, err error) {
+func credsFromSecret(ctx context.Context, c *kubernetes.Clientset, ns, name string) (accessKeyId, secretKey string, err error) {
 
 	nsName := fmt.Sprintf("%s/%s", ns, name)
 	glog.V(2).Infof("getting secret %q...", nsName)
-	secret, err := c.CoreV1().Secrets(ns).Get(name, metav1.GetOptions{})
+	secret, err := c.CoreV1().Secrets(ns).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		// TODO: some kind of exponential backoff and retry...
 		return
