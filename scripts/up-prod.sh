@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 
 kubectl apply -f crds/apiextensions-v1/objectbucket.io_objectbuckets.yaml
 kubectl apply -f crds/apiextensions-v1/objectbucket.io_objectbucketclaims.yaml
+kubectl apply -f examples/cloudian-s3-provisioner.yaml
 kubectl apply -f examples/owner-secret.yaml
 kubectl apply -f "examples/$field/storageclass.yaml"
 kubectl apply -f "examples/$field/photo.yaml"
