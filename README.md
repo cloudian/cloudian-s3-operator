@@ -2,7 +2,7 @@
 
 ### Deploying the operator
 
-Please see the [Quick Start Guide](CloudianK8sS3Operator_QuickStart_v-1.0.pdf) to get started.
+Please see the [Quick Start Guide](CloudianK8sS3Operator_QuickStart_v-1.1.pdf) to get started.
 
 ### Developing the operator
 

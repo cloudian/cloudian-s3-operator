@@ -1,28 +1,14 @@
 # Development environment
 
-## Docker
-We're using docker to provide a consistent development environment.
-
-It is assumed you have docker and docker-compose installed on your development machine and that your user has access to the docker socket (eg "docker ps" works).
-
-The scripts/devenv.sh starts the development docker containers (if not already started) and puts you in a bash shell inside the development container. This container has the tools required to develop and test the provisioner pre-installed:
-- go1.14
-- go tools (eg formatter, linter, debugger)
-- kubectl
-- KinD (kubernetes in docker)
-- shellcheck (linter for shell scripts)
-
-A kind cluster is started inside the dev container.
-
 ## VSCode
 
-If you use VSCode as your editor, life is even nicer! Install the [Microsoft remote containers extension](https://marketplace.visualstudio.com/items?itemName=ms-VSCode-remote.remote-containers) and when you open the workspace a popup will appear prompting you to reopen in the dev container. Choosing this will start a dev container and:
+We provide a devcontainer for developing this operator inside vscode. Install the [Microsoft remote containers extension](https://marketplace.visualstudio.com/items?itemName=ms-VSCode-remote.remote-containers) and when you open the workspace a popup will appear prompting you to reopen in the dev container. Choosing this will start a dev container and:
 - install relevant extensions (go, kubernetes, shellcheck, gitlens)
 - install a KinD k8s cluster 
 - configure a launch.json for debugging
 
 The VSCode terminal will be a shell running inside the dev container, so scripts defined in the following section will run fine.
-Note the first time you load the dev container can take a while, and there’s no output to show it’s making progress! Be patient - subsequent starts will be much faster. Once started, if you want a shell outside of VSCode you can use `scripts/devcontainer.sh` to start a shell in the same container the VSCode is running in.
+Note the first time you load the dev container can take a while, and there’s no output to show it’s making progress! Be patient - subsequent starts will be much faster.
 
 To test a deployment under the debugger, hit F5 to start the provisioner under the debugger (setting any breakpoints you’d like to trap). Then run `up.sh --nop` to provision the photo gallery app. The `--nop` option prevents `up.sh` from starting its own provisioner.
 

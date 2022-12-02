@@ -6,12 +6,12 @@ if [ "$field" != "greenfield" ] && [ "$field" != "brownfield" ]; then
   exit 1
 fi
 
-examples=$(dirname "$0")/../examples
+cd "$(dirname "$0")/.."
 
-kubectl apply -f "https://raw.githubusercontent.com/kube-object-storage/lib-bucket-provisioner/master/deploy/crds/objectbucket_v1alpha1_objectbucket_crd.yaml"
-kubectl apply -f "https://raw.githubusercontent.com/kube-object-storage/lib-bucket-provisioner/master/deploy/crds/objectbucket_v1alpha1_objectbucketclaim_crd.yaml"
-kubectl apply -f "$examples/cloudian-s3-provisioner.yaml"
-kubectl apply -f "$examples/owner-secret.yaml"
-kubectl apply -f "$examples/$field/storageclass.yaml"
-kubectl apply -f "$examples/$field/photo.yaml"
+kubectl apply -f crds/apiextensions-v1/objectbucket.io_objectbuckets.yaml
+kubectl apply -f crds/apiextensions-v1/objectbucket.io_objectbucketclaims.yaml
+kubectl apply -f examples/cloudian-s3-provisioner.yaml
+kubectl apply -f examples/owner-secret.yaml
+kubectl apply -f "examples/$field/storageclass.yaml"
+kubectl apply -f "examples/$field/photo.yaml"
 kubectl get pods -w

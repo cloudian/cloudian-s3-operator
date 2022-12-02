@@ -24,10 +24,10 @@ if $keep; then
 fi
 
 # Kill provisioner
-ps auxf | grep cloudian-s3-operator | grep -v grep | grep -v docker | grep -v down.sh | awk '{print $2}' | xargs --no-run-if-empty kill
+pgrep -f "alsologtostderr" | xargs --no-run-if-empty kill
 
 # Undo object setup
 kubectl delete -f examples/owner-secret.yaml
 kubectl delete -f examples/cloudian-s3-provisioner-dev.yaml
-kubectl delete -f https://raw.githubusercontent.com/kube-object-storage/lib-bucket-provisioner/master/deploy/crds/objectbucket_v1alpha1_objectbucket_crd.yaml
-kubectl delete -f https://raw.githubusercontent.com/kube-object-storage/lib-bucket-provisioner/master/deploy/crds/objectbucket_v1alpha1_objectbucketclaim_crd.yaml
+kubectl delete -f crds/apiextensions-v1/objectbucket.io_objectbuckets.yaml
+kubectl delete -f crds/apiextensions-v1/objectbucket.io_objectbucketclaims.yaml
