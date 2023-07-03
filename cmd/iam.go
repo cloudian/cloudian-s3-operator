@@ -247,8 +247,8 @@ func (p *awsS3Provisioner) createBucketPolicyDocument(bktName string, options *a
 			"s3:PutObjectTagging",
 			"s3:PutObjectVersionTagging",
 			"s3:PutReplicationConfiguration",
-			"s3:ReplicateDelete",
-			"s3:RestoreObject"},
+			"s3:RestoreObject",
+		},
 		Resource: []string{arn + "/*", arn},
 	}
 
