@@ -1,9 +1,10 @@
 FROM ubuntu:22.04
 
 ARG USERNAME=builder
-ARG GO_VERSION=1.19.3
+ARG GO_VERSION=1.20.5
 ARG KUBECTL_VERSION=v1.25.3
 ARG KIND_VERSION=v0.17.0
+ARG K3D_VERSION=v5.5.1
 
 # Configure apt, install packages and tools
 ARG DEBIAN_FRONTEND=noninteractive
@@ -27,6 +28,11 @@ RUN curl -sSfLo /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes
 RUN curl -sSfLo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-$(uname)-amd64 \
     && chmod +x /usr/local/bin/kind \
     && kind completion bash > /etc/bash_completion.d/kind
+
+# Install k3d
+RUN curl -sSfLo /usr/local/bin/k3d https://github.com/k3d-io/k3d/releases/download/${K3D_VERSION}/k3d-linux-amd64 \
+    && chmod +x /usr/local/bin/k3d \
+    && k3d completion bash > /etc/bash_completion.d/k3d
 
 # Create a non-root user to use 
 RUN groupadd $USERNAME \
