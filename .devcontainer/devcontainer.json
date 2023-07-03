@@ -17,7 +17,7 @@
 		"EDITOR": "code -r -w",
 		"PATH": "${containerEnv:PATH}:/workspaces/cloudian-s3-operator/scripts"
 	},
-	"postCreateCommand": "scripts/k8s.sh --restore",
+	"postCreateCommand": "scripts/k3d.sh --restore",
 	"forwardPorts": [30007],
 	"portsAttributes": {
 		"30007": {

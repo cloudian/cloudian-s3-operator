@@ -3,11 +3,16 @@
 CREDENTIALS=$HOME/.aws/credentials
 
 getcredential() {
-  echo -n "$(awk "{ FS = \"[ ]?=[ ]?\" } ; \$1 == \"$1\" { print \$2 }" "$CREDENTIALS")"  | base64
+  echo -n "$(awk "{ FS = \"[ ]?=[ ]?\" } ; \$1 == \"$1\" { print \$2 }" "$CREDENTIALS")"
 }
 
-AWS_ACCESS_KEY_ID=$(getcredential 'aws_access_key_id')
-AWS_SECRET_ACCESS_KEY=$(getcredential 'aws_secret_access_key')
+# Get credentials from .aws/credentials if not supplied in envionment variables
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-$(getcredential 'aws_access_key_id')}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-$(getcredential 'aws_secret_access_key')}
+
+# Convert to base64
+AWS_ACCESS_KEY_ID=$(echo -n "$AWS_ACCESS_KEY_ID" | base64)
+AWS_SECRET_ACCESS_KEY=$(echo -n "$AWS_SECRET_ACCESS_KEY" | base64)
 
 OWNER_SECRET_PATH=examples/owner-secret.yaml
 OWNER_SECRET=$(dirname "$0")/../$OWNER_SECRET_PATH
